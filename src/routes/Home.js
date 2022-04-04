@@ -1,54 +1,29 @@
-import { dbService } from "fbase";
+import { dbService, storageService } from "fbase";
 import React, { useEffect, useState } from "react";
+import NweetFactory from "components/NweetFactory";
+import Nweet from "components/Nweet";
 
-const Home = () => {
-    const [contents, setContents] = useState("");
+const Home = ({userObj}) => {
     const [contentList, setContentList] = useState([]);
-    
-    const getContents = async() =>{
-        const datas = await dbService.collection("nweets").get(); 
-      
-        datas.forEach((document) => {
-            const newContents ={
-                ...document.data(),
-                id : document.id
-            };
-            setContentList((prev) => [newContents, ...prev]);
-        });
-        
-    }
 
     useEffect(async() => {
-        getContents();
+        dbService.collection("nweets").onSnapshot((snapshot) => {
+            const nweetArray = snapshot.docs.map((doc) => ({
+                id : doc.id,
+                ...doc.data(),
+            }));
+            setContentList(nweetArray);
+        });
     }, []);
 
-    const onSubmit = async (event) => {
-      
-        event.preventDefault();
-        await dbService.collection("nweets").add({
-            contents : contents,
-            createdAt : Date.now(),
-        });
-        setContents("");
-    }
-    const onChange = (event) => {
-        const {target : {value}} = event;
-        setContents(value);
-    }
-
-    console.log(contentList);
-
     return <div>
-        <form onSubmit={onSubmit}>
-            <input type="text" placeholder="지금 무슨 생각을 하고 계신가요?" maxLength="120" vlaue={contents} onChange={onChange}></input>
-            <input type="submit" value="게시"></input>
-        </form>
-        <div>
+        <div className="container">
+            <NweetFactory userObj={userObj}></NweetFactory>
+            <div style={{ marginTop: 30 }}>
             {contentList.map((content) =>(
-                    <div key={content.id}>
-                        <h4>{content.contents}</h4>
-                    </div>
+                <Nweet key={content.id} nweetObj={content} isOwner={userObj.uid == content.creatorId}></Nweet>
             ))}
+            </div>
         </div>
     </div>
 }
